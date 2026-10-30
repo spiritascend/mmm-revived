@@ -11,6 +11,8 @@ const (
 	headItemType      = 1022
 	headFrameItemType = 1023
 	timedItemType     = 1050
+	badgeItemType     = 1035
+	backItemType      = 1045
 )
 
 func (a *Account) grantTimedCosmetic(r *Rules, rule ItemRule, amount, now int64) bool {

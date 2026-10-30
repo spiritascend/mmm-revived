@@ -74,6 +74,7 @@ Edit `build/config.toml`, then run `just configure "<game folder>"` and `just ru
 | `team_size` | Max heroes per battle (default `3`) |
 | `energy_regen` | Energy regen speed, e.g. `1.25` = 25% faster (default `1`) |
 | `reward_multiplier` | Multiplies Treasure Hunt, Rune Raid, Fabled Finds and other challenge rewards; XP stays the same (default `1`) |
+| `all_cosmetics` | `true` = fresh-start accounts own every avatar, frame, background, badge and outfit (default `false`) |
 
 Banner ids: 2 Iron Man, 3 Captain America, 4 Loki, 5 Invisible Woman, 6 Mister Fantastic, 7 Spider-Man, 8 Thor, 9 Gambit, 10 Juggernaut, 11 Namor, 12 Emma Frost, 13 Silver Surfer, 14 Doctor Strange, 15 Green Goblin, 17 Daredevil, 19 Magneto, 20 Storm, 21 Phoenix, 23 Venom, 25 Wolverine, 27 Cyclops, 29 Morgan le Fay. These options work with `fresh_start` and apply to existing accounts on the next login.
 

@@ -77,6 +77,7 @@ type Rules struct {
 	TeamSize              int                                             `json:"-"`
 	EnergyRegen           float64                                         `json:"-"`
 	RewardMultiplier      int                                             `json:"-"`
+	AllCosmetics          bool                                            `json:"-"`
 }
 
 type HeroTraits struct {

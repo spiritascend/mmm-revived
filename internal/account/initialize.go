@@ -160,6 +160,12 @@ func (a *Account) Initialize(c Catalog, r *Rules) {
 		if !a.Retail {
 			a.TeamBreak = TeamBreakAt(r, a.Level)
 		}
+		if a.Retail && r.AllCosmetics {
+			if a.Items == nil {
+				a.Items = map[model.ItemID]int64{}
+			}
+			a.unlockCosmetics(c, r)
+		}
 		a.normalizeSkins(r)
 		if a.Retail {
 			for _, id := range slices.Sorted(maps.Keys(a.Heroes)) {

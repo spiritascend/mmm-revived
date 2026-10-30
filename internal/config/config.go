@@ -52,6 +52,7 @@ type Config struct {
 	TeamSize         int     `json:"team_size" toml:"team_size"`
 	EnergyRegen      float64 `json:"energy_regen" toml:"energy_regen"`
 	RewardMultiplier int     `json:"reward_multiplier" toml:"reward_multiplier"`
+	AllCosmetics     bool    `json:"all_cosmetics" toml:"all_cosmetics"`
 	Keys             Keys    `json:"keys" toml:"keys"`
 	dir              string
 }
@@ -159,6 +160,7 @@ all_events = %t # Keep every event open; one-at-a-time events (PvP seasons, Infi
 team_size = %d # Max heroes per battle
 energy_regen = %s # Energy regeneration speed, e.g. 1.25 = 25%% faster
 reward_multiplier = %d # Multiplies Treasure Hunt, Rune Raid, Fabled Finds and other challenge rewards (XP stays the same)
+all_cosmetics = %t # Unlock every avatar, frame, background, badge and outfit (used when fresh_start = true)
 
 [keys]
 private = %s
@@ -195,7 +197,7 @@ func (c Config) Write(path string) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
-	data := fmt.Sprintf(fileTemplate, quote(c.Host), c.Port, c.HTTPPort, c.FreshStart, c.StoryComplete, c.InfiniteEnergy, c.FreeDraws, c.DreamstoneShop, c.AllBanners, banners(c.FeaturedBanners), c.CalendarLoop, c.AllEvents, c.TeamSize, strconv.FormatFloat(c.EnergyRegen, 'f', -1, 64), c.RewardMultiplier, quote(c.Keys.Private), quote(c.Keys.Public))
+	data := fmt.Sprintf(fileTemplate, quote(c.Host), c.Port, c.HTTPPort, c.FreshStart, c.StoryComplete, c.InfiniteEnergy, c.FreeDraws, c.DreamstoneShop, c.AllBanners, banners(c.FeaturedBanners), c.CalendarLoop, c.AllEvents, c.TeamSize, strconv.FormatFloat(c.EnergyRegen, 'f', -1, 64), c.RewardMultiplier, c.AllCosmetics, quote(c.Keys.Private), quote(c.Keys.Public))
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
