@@ -64,53 +64,68 @@ func (a *Account) grantEnergyExperience(r *Rules, energy int64) error {
 	return nil
 }
 
-func (a *Account) FinishJourneyChallenge(r *Rules, id int, battle model.BattleID, won bool, bitmap int, clearTime int64, kills int) (map[model.ItemID]int64, error) {
+type ChallengeStarReward struct {
+	Star  int
+	Items map[model.ItemID]int64
+}
+
+func (a *Account) FinishJourneyChallenge(r *Rules, id int, battle model.BattleID, won bool, bitmap int, clearTime int64, kills int) (map[model.ItemID]int64, []ChallengeStarReward, error) {
 	run := a.Journey.ChallengeRun
 	if run == nil || run.ID != id || run.Battle != battle || bitmap < 0 || bitmap > 7 || clearTime < 0 || clearTime > 86400 || kills < 0 || kills > 1000000 {
-		return nil, rejected("challenge result does not match active run")
+		return nil, nil, rejected("challenge result does not match active run")
 	}
 	rule, known := r.Journey.Challenges[id]
 	if !known || rule.Battle != battle {
-		return nil, rejected("unknown challenge")
+		return nil, nil, rejected("unknown challenge")
 	}
 	if !won {
 		if err := a.grantEnergyExperience(r, rule.Energy*int64(run.Count)); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		a.Journey.ChallengeRun = nil
-		return map[model.ItemID]int64{}, nil
+		return map[model.ItemID]int64{}, nil, nil
 	}
 	record := a.Journey.Challenges[id]
-	rewards, err := droppedRewardItems(r, rule.Rewards, int64(run.Count))
+	rewards, err := r.challengeRewards(rule.Rewards, int64(run.Count))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if rewards, err = a.consumeDoubleMaterial(r, rule.Group, run.Count, rewards); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	stars := max(record.Stars, bits.OnesCount(uint(bitmap)))
-	var first []model.RewardID
+	extra := map[model.ItemID]int64{}
+	var first []ChallengeStarReward
 	for index, reward := range rule.StarRewards[:min(stars, len(rule.StarRewards))] {
-		if record.StarRewards&(1<<index) == 0 {
-			first = append(first, reward)
-			record.StarRewards |= 1 << index
+		if record.StarRewards&(1<<index) != 0 {
+			continue
 		}
-	}
-	extra, err := droppedRewardItems(r, first, 1)
-	if err != nil {
-		return nil, err
+		record.StarRewards |= 1 << index
+		items, err := droppedRewardItems(r, []model.RewardID{reward}, 1)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(items) == 0 {
+			continue
+		}
+		first = append(first, ChallengeStarReward{Star: index + 1, Items: items})
+		for item, count := range items {
+			if !addQuantity(extra, item, count) {
+				return nil, nil, rejected("challenge reward overflow")
+			}
+		}
 	}
 	if experience := a.energyExperience(rule.Energy * int64(run.Count)); experience > 0 {
 		extra[r.Settings.Items.TeamExperience] += experience
 	}
 	for item, count := range extra {
 		if rewards[item] > math.MaxInt64-count {
-			return nil, rejected("challenge reward overflow")
+			return nil, nil, rejected("challenge reward overflow")
 		}
 		rewards[item] += count
 	}
 	if err = a.GrantItems(r, rewards); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	record.Stars = stars
 	record.Bitmap |= bitmap
@@ -120,7 +135,7 @@ func (a *Account) FinishJourneyChallenge(r *Rules, id int, battle model.BattleID
 	record.Kills = max(record.Kills, kills)
 	a.Journey.Challenges[id] = record
 	a.Journey.ChallengeRun = nil
-	return rewards, nil
+	return rewards, first, nil
 }
 
 func (a *Account) SweepJourneyChallenge(r *Rules, id, count int) (map[model.ItemID]int64, error) {
@@ -128,7 +143,7 @@ func (a *Account) SweepJourneyChallenge(r *Rules, id, count int) (map[model.Item
 	if err != nil {
 		return nil, err
 	}
-	quantities, err := droppedRewardItems(r, rule.Rewards, int64(count))
+	quantities, err := r.challengeRewards(rule.Rewards, int64(count))
 	if err != nil {
 		return nil, err
 	}

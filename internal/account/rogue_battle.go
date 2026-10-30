@@ -31,20 +31,35 @@ func (a *Account) RogueBattleData(r *Rules, id model.BattleID) (RogueBattleData,
 			result.Limited[entry.ID] = entry
 			result.Extra.RogueHeroes[entry.ID] = model.RogueEnhancement{Level: enhancement}
 		}
-		result.Extra.EnemyTeam = make([][]int64, 0, len(run.Heroes))
-		used := make(map[model.HeroID]bool, len(run.Heroes))
-		for index := range len(run.Heroes) {
-			pool := rule.HeroPool[(run.Index+index)%len(rule.HeroPool)]
-			chosen := pool[0]
-			for _, hero := range pool {
-				if !used[hero] {
-					chosen = hero
-					break
+		enemies, err := sample(rogueHeroPool(r, run.ID), len(run.Heroes))
+		if err != nil {
+			return result, err
+		}
+		floor := 1
+		if len(rule.Levels) > 0 {
+			floor = max(floor, rule.Levels[min(run.Index, len(rule.Levels)-1)])
+		}
+		result.Extra.EnemyTeam = make([][]int64, 0, len(enemies))
+		for index, enemy := range enemies {
+			hero := run.Objects[run.Heroes[index]]
+			level, relicID, relicLevel, extraLevel := hero.Level, 0, 1, 0
+			if relic, exists := run.Objects[hero.Relic]; exists {
+				var same []int
+				for _, id := range rule.RelicPool {
+					if r.Rogue.Relics[id].Tier == r.Rogue.Relics[relic.ID].Tier {
+						same = append(same, id)
+					}
+				}
+				if relicID, err = randomChoice(same); err != nil {
+					relicID = relic.ID
+				}
+				relicLevel, extraLevel = relic.Level, relic.ExtraLevel
+				if bonuses := r.Rogue.Relics[relicID].HeroLevels; relicLevel > 0 && relicLevel <= len(bonuses) {
+					level += bonuses[relicLevel-1] + extraLevel
 				}
 			}
-			used[chosen] = true
-			level := max(1, rule.Levels[min(run.Index, len(rule.Levels)-1)])
-			result.Extra.EnemyTeam = append(result.Extra.EnemyTeam, []int64{int64(chosen), int64(level), 0, 1, 0})
+			level = min(r.Rogue.MaxHeroLevel, max(floor, level))
+			result.Extra.EnemyTeam = append(result.Extra.EnemyTeam, []int64{int64(enemy), int64(level), int64(relicID), int64(relicLevel), int64(extraLevel)})
 		}
 	case r.RoguePVEBattle(id):
 		v := &a.RogueProgress.PVE

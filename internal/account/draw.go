@@ -140,7 +140,7 @@ func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemI
 		if strategy.Counter != 0 {
 			count = a.Draw.Counters[strategy.Counter].Number
 		}
-		if strategy.Created != 0 && a.CreatedAt > strategy.Created {
+		if strategy.Created != 0 && a.CreatedAt > strategy.Created || strategy.Counter != 0 && len(strategy.Prizes) > 0 && a.Draw.Counters[strategy.Counter].Claimed {
 			continue
 		}
 		if count+1 >= strategy.Number && (strategy.Counter != 0 || !state.Satisfied[strategyID]) {
@@ -150,7 +150,14 @@ func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemI
 	if guarantee != 0 {
 		strategy := r.Draw.Strategies[guarantee]
 		if len(strategy.Prizes) > 0 {
-			prize, err := randomChoice(strategy.Prizes)
+			prizes := slices.DeleteFunc(slices.Clone(strategy.Prizes), func(prize int) bool {
+				_, candidate, err := r.Draw.resolvePrize(prize)
+				return err == nil && a.heroAwakened(r, candidate)
+			})
+			if len(prizes) == 0 {
+				prizes = strategy.Prizes
+			}
+			prize, err := randomChoice(prizes)
 			if err != nil {
 				return 0, err
 			}
@@ -173,6 +180,9 @@ func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemI
 			if slices.Contains(strategy.Sets, setID) && strategy.AdvanceNumber > 0 && a.Draw.Counters[strategy.Counter].Advance+1 >= strategy.AdvanceNumber && len(set.Up) > 0 {
 				choices = set.Up
 			}
+		}
+		if fresh := slices.DeleteFunc(slices.Clone(choices), func(candidate model.ItemID) bool { return a.heroAwakened(r, candidate) }); len(fresh) > 0 {
+			choices = fresh
 		}
 		item, err = randomChoice(choices)
 		if err != nil {
@@ -230,6 +240,9 @@ func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemI
 		if trigger {
 			counter.Number = 0
 		}
+		if len(strategy.Prizes) > 0 && (trigger || guarantee == strategyID) {
+			counter.Claimed = true
+		}
 		if strategy.AdvanceNumber > 0 && slices.Contains(strategy.Sets, setID) {
 			counter.Advance++
 			if slices.Contains(set.Up, item) {
@@ -251,4 +264,29 @@ func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemI
 	next.RefreshTasks(r)
 	*a = next
 	return item, nil
+}
+
+func (a *Account) heroAwakened(r *Rules, item model.ItemID) bool {
+	rule := r.ItemRules[item]
+	id := model.HeroID(rule.Parameter)
+	hero, owned := a.Heroes[id]
+	if rule.Type != 1002 || !owned || hero.Trial != 0 {
+		return false
+	}
+	needed, known := map[model.ItemID]int64{}, false
+	for awake, cost := range r.HeroAwake {
+		if awake/10 != int(id) || len(cost.Cost) != 2 {
+			continue
+		}
+		known = true
+		if !slices.Contains(hero.AwakeIDs, awake) {
+			needed[model.ItemID(cost.Cost[0])] += cost.Cost[1]
+		}
+	}
+	for cost, count := range needed {
+		if count > a.Items[cost] {
+			return false
+		}
+	}
+	return known
 }

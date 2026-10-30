@@ -36,36 +36,38 @@ type Keys struct {
 }
 
 type Config struct {
-	Host            string  `json:"host" toml:"host"`
-	Port            int     `json:"port" toml:"port"`
-	HTTPPort        int     `json:"httpPort" toml:"httpPort"`
-	Start           string  `json:"start" toml:"start"`
-	FreshStart      bool    `json:"fresh_start" toml:"fresh_start"`
-	InfiniteEnergy  bool    `json:"infinite_energy" toml:"infinite_energy"`
-	FreeDraws       bool    `json:"free_draws" toml:"free_draws"`
-	DreamstoneShop  bool    `json:"dreamstone_shop" toml:"dreamstone_shop"`
-	AllBanners      bool    `json:"all_banners" toml:"all_banners"`
-	FeaturedBanners []int32 `json:"featured_banners" toml:"featured_banners"`
-	CalendarLoop    bool    `json:"calendar_loop" toml:"calendar_loop"`
-	AllEvents       bool    `json:"all_events" toml:"all_events"`
-	TeamSize        int     `json:"team_size" toml:"team_size"`
-	EnergyRegen     float64 `json:"energy_regen" toml:"energy_regen"`
-	Keys            Keys    `json:"keys" toml:"keys"`
-	dir             string
+	Host             string  `json:"host" toml:"host"`
+	Port             int     `json:"port" toml:"port"`
+	HTTPPort         int     `json:"httpPort" toml:"httpPort"`
+	FreshStart       bool    `json:"fresh_start" toml:"fresh_start"`
+	StoryComplete    bool    `json:"story_complete" toml:"story_complete"`
+	LegacyStart      string  `json:"start,omitempty" toml:"start,omitempty"`
+	InfiniteEnergy   bool    `json:"infinite_energy" toml:"infinite_energy"`
+	FreeDraws        bool    `json:"free_draws" toml:"free_draws"`
+	DreamstoneShop   bool    `json:"dreamstone_shop" toml:"dreamstone_shop"`
+	AllBanners       bool    `json:"all_banners" toml:"all_banners"`
+	FeaturedBanners  []int32 `json:"featured_banners" toml:"featured_banners"`
+	CalendarLoop     bool    `json:"calendar_loop" toml:"calendar_loop"`
+	AllEvents        bool    `json:"all_events" toml:"all_events"`
+	TeamSize         int     `json:"team_size" toml:"team_size"`
+	EnergyRegen      float64 `json:"energy_regen" toml:"energy_regen"`
+	RewardMultiplier int     `json:"reward_multiplier" toml:"reward_multiplier"`
+	Keys             Keys    `json:"keys" toml:"keys"`
+	dir              string
 }
 
 func Default() Config {
 	return Config{
-		Host:         "127.0.0.1",
-		Port:         14100,
-		HTTPPort:     18080,
-		Start:        string(account.StartItems),
-		FreshStart:   true,
-		CalendarLoop: true,
-		AllEvents:    true,
-		TeamSize:     3,
-		EnergyRegen:  1,
-		Keys:         Keys{Private: "keys/server.pem", Public: "keys/client-public.pem"},
+		Host:             "127.0.0.1",
+		Port:             14100,
+		HTTPPort:         18080,
+		FreshStart:       true,
+		CalendarLoop:     true,
+		AllEvents:        true,
+		TeamSize:         3,
+		EnergyRegen:      1,
+		RewardMultiplier: 1,
+		Keys:             Keys{Private: "keys/server.pem", Public: "keys/client-public.pem"},
 	}
 }
 
@@ -86,7 +88,25 @@ func Load(path string) (Config, error) {
 	if err = toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(&c); err != nil {
 		return c, fmt.Errorf("parse %s: %w", absolute, err)
 	}
+	if c.LegacyStart != "" {
+		if err = c.upgradeStart(); err != nil {
+			return c, err
+		}
+		return c, c.Write(absolute)
+	}
 	return c, c.Validate()
+}
+
+func (c *Config) upgradeStart() error {
+	if c.LegacyStart == "" {
+		return nil
+	}
+	start, err := account.ParseStart(c.LegacyStart)
+	if err != nil {
+		return err
+	}
+	c.StoryComplete, c.LegacyStart = start == account.StartUnlocked, ""
+	return nil
 }
 
 func Exists(path string) bool {
@@ -115,6 +135,9 @@ func (c Config) migrate(path string) (Config, error) {
 	if err = decoder.Decode(new(json.RawMessage)); !errors.Is(err, io.EOF) {
 		return c, fmt.Errorf("parse %s: unexpected content after configuration", legacy)
 	}
+	if err = c.upgradeStart(); err != nil {
+		return c, err
+	}
 	if err = c.Write(path); err != nil {
 		return c, err
 	}
@@ -124,8 +147,8 @@ func (c Config) migrate(path string) (Config, error) {
 const fileTemplate = `host = %s
 port = %d
 httpPort = %d
-fresh_start = %t # All new accounts will have 0 progression and 0 items
-start = %s # "items" | "unlocked" (used when fresh_start = false)
+fresh_start = %t # true = new accounts start from zero // false = every item and cosmetic unlocked
+story_complete = %t # Story and tutorials already finished at max team level (used when fresh_start = false)
 infinite_energy = %t # Energy refills to max after every use
 free_draws = %t # Draws cost no keys (keeps 10 of each key)
 dreamstone_shop = %t # Show the Dreamstone top-up page in the shop (top-ups are free)
@@ -135,6 +158,7 @@ calendar_loop = %t # Repeat the dated content calendar (Battle Pass, events, ban
 all_events = %t # Keep every event open; one-at-a-time events (PvP seasons, Infinite Mayhem, bosses) rotate without gaps
 team_size = %d # Max heroes per battle
 energy_regen = %s # Energy regeneration speed, e.g. 1.25 = 25%% faster
+reward_multiplier = %d # Multiplies Treasure Hunt, Rune Raid, Fabled Finds and other challenge rewards (XP stays the same)
 
 [keys]
 private = %s
@@ -171,7 +195,7 @@ func (c Config) Write(path string) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
-	data := fmt.Sprintf(fileTemplate, quote(c.Host), c.Port, c.HTTPPort, c.FreshStart, quote(c.Start), c.InfiniteEnergy, c.FreeDraws, c.DreamstoneShop, c.AllBanners, banners(c.FeaturedBanners), c.CalendarLoop, c.AllEvents, c.TeamSize, strconv.FormatFloat(c.EnergyRegen, 'f', -1, 64), quote(c.Keys.Private), quote(c.Keys.Public))
+	data := fmt.Sprintf(fileTemplate, quote(c.Host), c.Port, c.HTTPPort, c.FreshStart, c.StoryComplete, c.InfiniteEnergy, c.FreeDraws, c.DreamstoneShop, c.AllBanners, banners(c.FeaturedBanners), c.CalendarLoop, c.AllEvents, c.TeamSize, strconv.FormatFloat(c.EnergyRegen, 'f', -1, 64), c.RewardMultiplier, quote(c.Keys.Private), quote(c.Keys.Public))
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -194,9 +218,6 @@ func (c Config) Validate() error {
 	if c.Port == c.HTTPPort {
 		problems = append(problems, errors.New("port and httpPort must differ"))
 	}
-	if _, err := account.ParseStart(c.Start); err != nil {
-		problems = append(problems, err)
-	}
 	for _, id := range c.FeaturedBanners {
 		if id <= 0 {
 			problems = append(problems, fmt.Errorf("featured_banners must be draw pool ids, got %d", id))
@@ -208,6 +229,9 @@ func (c Config) Validate() error {
 	if !(c.EnergyRegen > 0) || math.IsInf(c.EnergyRegen, 0) {
 		problems = append(problems, fmt.Errorf("energy_regen must be greater than 0, got %v", c.EnergyRegen))
 	}
+	if c.RewardMultiplier < 1 {
+		problems = append(problems, fmt.Errorf("reward_multiplier must be at least 1, got %d", c.RewardMultiplier))
+	}
 	if c.Keys.Private == "" || c.Keys.Public == "" || c.Keys.Private == c.Keys.Public {
 		problems = append(problems, errors.New("keys.private and keys.public must be distinct paths"))
 	}
@@ -218,7 +242,12 @@ func (c Config) Address() string { return net.JoinHostPort(c.Host, strconv.Itoa(
 
 func (c Config) HTTPAddress() string { return net.JoinHostPort(c.Host, strconv.Itoa(c.HTTPPort)) }
 
-func (c Config) StartMode() account.Start { return account.Start(c.Start) }
+func (c Config) StartMode() account.Start {
+	if c.StoryComplete {
+		return account.StartUnlocked
+	}
+	return account.StartItems
+}
 
 func (c Config) Economy() account.EconomyOptions {
 	featured := make([]model.DrawPoolID, len(c.FeaturedBanners))

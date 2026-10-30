@@ -203,7 +203,14 @@ func (a *Account) refreshJourneyTaskValuesAt(r *Rules, now int64) {
 		case 39:
 			value = int64(a.TeamBreak)
 		case 40:
-			value = int64(a.RogueProgress.TotalWins)
+			switch taskNumber(rule, 0, 0) {
+			case 1:
+				value = int64(a.RogueProgress.TotalWins)
+			case 2:
+				value = int64(a.RogueProgress.PVEWins)
+			default:
+				value = int64(a.RogueProgress.TotalWins + a.RogueProgress.PVEWins)
+			}
 		case 50:
 			chapter := model.ChapterID(taskNumber(rule, 0, 0))
 			for mission, progress := range a.Passed {

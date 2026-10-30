@@ -172,6 +172,8 @@ type RogueProgress struct {
 	PVERecords          []RoguePVERecord        `json:"pve_records"`
 	FinalWins           int                     `json:"final_wins"`
 	FinalWinsCounted    bool                    `json:"final_wins_counted"`
+	PVEWins             int                     `json:"pve_wins"`
+	PVEWinsCounted      bool                    `json:"pve_wins_counted"`
 	RogueID             int                     `json:"-"`
 	RankVersion         int                     `json:"-"`
 	NewbiePassed        bool                    `json:"-"`

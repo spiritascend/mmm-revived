@@ -79,6 +79,9 @@ func (a *Account) grantItems(r *Rules, quantities map[model.ItemID]int64, depth 
 					current.Trial = 0
 					a.Heroes[hero] = current
 					amount--
+					if err := a.grantStarReward(r, hero, depth); err != nil {
+						return err
+					}
 				}
 				if err := a.grantRefund(r, rule, amount, depth); err != nil {
 					return err
@@ -94,6 +97,9 @@ func (a *Account) grantItems(r *Rules, quantities map[model.ItemID]int64, depth 
 				star = 3
 			}
 			a.Heroes[hero] = model.Hero{ID: hero, Level: 1, Star: star, Talents: map[int]int{1: 1, 2: 1, 3: 1, 4: 1, 5: 1}, AwakeIDs: []int{}, Artifacts: map[int]model.InstanceID{}, Highlights: map[int]model.InstanceID{}}
+			if err := a.grantStarReward(r, hero, depth); err != nil {
+				return err
+			}
 			if amount > 1 {
 				if err := a.grantRefund(r, rule, amount-1, depth); err != nil {
 					return err

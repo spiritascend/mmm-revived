@@ -19,4 +19,5 @@ type RewardDetails struct {
 	SubAttributes  map[string]int64 `wire:"subAttr,omitempty"`
 	Task           TaskID           `wire:"taskId,omitempty"`
 	TrialConverted int              `wire:"trail2official,omitempty"`
+	ChallengeStar  int              `wire:"challengeStarShow,omitempty"`
 }

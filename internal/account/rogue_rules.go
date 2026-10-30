@@ -10,41 +10,44 @@ import (
 )
 
 type RogueRules struct {
-	Runs            map[int]RogueRunRule           `json:"runs"`
-	Shops           map[int]RogueShopRule          `json:"shops"`
-	Relics          map[int]RogueRelicRule         `json:"relics"`
-	Chests          map[int]RogueChestRule         `json:"chests"`
-	PVE             map[int]RoguePVERule           `json:"pve"`
-	Events          map[int]RogueEventRule         `json:"events"`
-	EventGroups     map[int][]int                  `json:"event_groups"`
-	Buffs           map[int]RogueBuffRule          `json:"buffs"`
-	FirstRewards    map[int]model.RewardID         `json:"first_rewards"`
-	WeekRewards     map[int]model.RewardID         `json:"week_rewards"`
-	PVEFirstRewards map[int]model.RewardID         `json:"pve_first_rewards"`
-	PVEWeekRewards  map[int]model.RewardID         `json:"pve_week_rewards"`
-	Alternations    map[int64]RogueAlternationRule `json:"alternations"`
-	Unlock          map[string]RogueUnlockRule     `json:"unlock"`
-	Score           int64                          `json:"score"`
-	PVEScore        int64                          `json:"pve_score"`
-	RecordLimit     int                            `json:"record_limit"`
-	HeroStar        int                            `json:"hero_star"`
-	MaxHeroLevel    int                            `json:"max_hero_level"`
-	MaxTimeScore    int64                          `json:"max_time_score"`
-	RankWinScore    int64                          `json:"rank_win_score"`
-	RankLossScore   int64                          `json:"rank_loss_score"`
-	RankVersion     int                            `json:"rank_version"`
-	NewbiePassed    bool                           `json:"newbie_passed"`
-	Currency        model.ItemID                   `json:"currency"`
-	PVECurrency     model.ItemID                   `json:"pve_currency"`
-	WinReward       model.RewardID                 `json:"win_reward"`
-	PVEWinRewards   []model.RewardID               `json:"pve_win_rewards"`
-	RelicPrices     []int64                        `json:"relic_prices"`
-	RefreshPrice    int64                          `json:"refresh_price"`
-	SalePrice       int64                          `json:"sale_price"`
-	Life            int                            `json:"life"`
-	HeroLevel       int                            `json:"hero_level"`
-	RechooseLimit   int                            `json:"rechoose_limit"`
-	MaximumWins     int                            `json:"max_wins"`
+	Runs            map[int]RogueRunRule              `json:"runs"`
+	Shops           map[int]RogueShopRule             `json:"shops"`
+	Relics          map[int]RogueRelicRule            `json:"relics"`
+	Chests          map[int]RogueChestRule            `json:"chests"`
+	ChestDrops      map[model.RewardID]RogueChestDrop `json:"chest_drops"`
+	HeroUnlockWins  map[model.HeroID]int              `json:"hero_unlock_wins"`
+	HeroNum         int                               `json:"hero_num"`
+	PVE             map[int]RoguePVERule              `json:"pve"`
+	Events          map[int]RogueEventRule            `json:"events"`
+	EventGroups     map[int][]int                     `json:"event_groups"`
+	Buffs           map[int]RogueBuffRule             `json:"buffs"`
+	FirstRewards    map[int]model.RewardID            `json:"first_rewards"`
+	WeekRewards     map[int]model.RewardID            `json:"week_rewards"`
+	PVEFirstRewards map[int]model.RewardID            `json:"pve_first_rewards"`
+	PVEWeekRewards  map[int]model.RewardID            `json:"pve_week_rewards"`
+	Alternations    map[int64]RogueAlternationRule    `json:"alternations"`
+	Unlock          map[string]RogueUnlockRule        `json:"unlock"`
+	Score           int64                             `json:"score"`
+	PVEScore        int64                             `json:"pve_score"`
+	RecordLimit     int                               `json:"record_limit"`
+	HeroStar        int                               `json:"hero_star"`
+	MaxHeroLevel    int                               `json:"max_hero_level"`
+	MaxTimeScore    int64                             `json:"max_time_score"`
+	RankWinScore    int64                             `json:"rank_win_score"`
+	RankLossScore   int64                             `json:"rank_loss_score"`
+	RankVersion     int                               `json:"rank_version"`
+	NewbiePassed    bool                              `json:"newbie_passed"`
+	Currency        model.ItemID                      `json:"currency"`
+	PVECurrency     model.ItemID                      `json:"pve_currency"`
+	WinReward       model.RewardID                    `json:"win_reward"`
+	PVEWinRewards   []model.RewardID                  `json:"pve_win_rewards"`
+	RelicPrices     []int64                           `json:"relic_prices"`
+	RefreshPrice    int64                             `json:"refresh_price"`
+	SalePrice       int64                             `json:"sale_price"`
+	Life            int                               `json:"life"`
+	HeroLevel       int                               `json:"hero_level"`
+	RechooseLimit   int                               `json:"rechoose_limit"`
+	MaximumWins     int                               `json:"max_wins"`
 }
 
 type RogueRunRule struct {
@@ -78,6 +81,11 @@ type RogueChestRule struct {
 	Level   int                    `json:"limitLv"`
 	Battle  model.BattleID         `json:"unlock_battle"`
 	Rewards []model.RewardID       `json:"reward"`
+}
+
+type RogueChestDrop struct {
+	Guaranteed map[model.ItemID]int64 `json:"guaranteed"`
+	Extra      map[model.ItemID]int64 `json:"extra"`
 }
 
 type RoguePVERule struct {

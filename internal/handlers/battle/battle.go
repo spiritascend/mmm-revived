@@ -14,6 +14,32 @@ import (
 	"mmm-revived/internal/server"
 )
 
+const (
+	showNormal  = 1
+	showPassive = 6
+)
+
+func challengeStarRewards(rewards []model.ItemReward, stars []account.ChallengeStarReward) []model.ItemReward {
+	for _, star := range stars {
+		for _, item := range slices.Sorted(maps.Keys(star.Items)) {
+			remaining := star.Items[item]
+			for index := 0; index < len(rewards) && remaining > 0; index++ {
+				if rewards[index].Item != item || rewards[index].Details.ChallengeStar != 0 {
+					continue
+				}
+				if rewards[index].Count > remaining && rewards[index].Details.Unique == "" {
+					rewards[index].Count -= remaining
+					rewards = append(rewards, model.ItemReward{Item: item, Count: remaining, Details: model.RewardDetails{ChallengeStar: star.Star}})
+					break
+				}
+				rewards[index].Details.ChallengeStar = star.Star
+				remaining -= rewards[index].Count
+			}
+		}
+	}
+	return rewards
+}
+
 func (s service) createBattle(p *server.Player, r CreateBattle) error {
 	if p.State == server.Deployment || p.State == server.Combat {
 		p.State, p.Nonce, p.Deployment, p.SelectedHeroes = server.Lobby, "", nil, nil
@@ -232,6 +258,7 @@ func (s service) settleBattle(p *server.Player, r VerifyBattle) error {
 	nodeChanged := false
 	beforeReward := *p.Account
 	battleRewards := map[model.ItemID]int64{}
+	var starRewards []account.ChallengeStarReward
 	previousLevel, teamBroke := p.Account.Level, false
 	err := s.Store.Update(p.Account, func(tx *sql.Tx) error {
 		if p.ActivityBattle > 0 {
@@ -269,10 +296,11 @@ func (s service) settleBattle(p *server.Player, r VerifyBattle) error {
 			}
 		}
 		if p.Challenge > 0 {
-			items, err := p.Account.FinishJourneyChallenge(s.Store.Rules, p.Challenge, p.BattleID, r.Win, r.Result.StarBitmap, r.Result.Extra.UseTime, r.Result.KillCount)
+			items, stars, err := p.Account.FinishJourneyChallenge(s.Store.Rules, p.Challenge, p.BattleID, r.Win, r.Result.StarBitmap, r.Result.Extra.UseTime, r.Result.KillCount)
 			if err != nil {
 				return err
 			}
+			starRewards = stars
 			for id, count := range items {
 				battleRewards[id] += count
 			}
@@ -368,6 +396,16 @@ func (s service) settleBattle(p *server.Player, r VerifyBattle) error {
 	if teamBroke {
 		p.Level = p.Account.Level
 	}
+	var rewards []model.ItemReward
+	if len(battleRewards) > 0 {
+		rewards = challengeStarRewards(s.ItemRewards(beforeReward, p.Account, battleRewards), starRewards)
+	}
+	passive := p.Challenge > 0 && len(rewards) > 0
+	if passive {
+		if err := p.Send("preReward", []model.RewardID{}); err != nil {
+			return err
+		}
+	}
 	if err := s.Sync(p, "dreamlandComp", "itemComp", "heroComp", "noviceComp", "activityComp", "bossComp", "battleNewComp", "challengeComp", "spiralComp", "taskComp"); err != nil {
 		return err
 	}
@@ -395,6 +433,11 @@ func (s service) settleBattle(p *server.Player, r VerifyBattle) error {
 			return err
 		}
 	}
+	if passive {
+		if err := p.Send("showReward", []model.RewardID{}, rewards, showPassive); err != nil {
+			return err
+		}
+	}
 	if err := p.Send("onBattleEnd", p.BattleID, r.Result); err != nil {
 		return err
 	}
@@ -403,8 +446,8 @@ func (s service) settleBattle(p *server.Player, r VerifyBattle) error {
 			return err
 		}
 	}
-	if len(battleRewards) > 0 {
-		if err := p.Send("showReward", []model.RewardID{}, s.ItemRewards(beforeReward, p.Account, battleRewards), 1); err != nil {
+	if !passive && len(rewards) > 0 {
+		if err := p.Send("showReward", []model.RewardID{}, rewards, showNormal); err != nil {
 			return err
 		}
 	}

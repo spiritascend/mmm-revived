@@ -1,6 +1,8 @@
 import argparse
 import ctypes
 import json
+import os
+import re
 import struct
 import sys
 from pathlib import Path
@@ -406,6 +408,46 @@ def code_field(t, module, field):
     raise ValueError(module + '.' + field)
 
 
+def rogue_chest_drops(t):
+    load = t.module
+    items, rewards, strings = load('item_data_cn'), load('reward_data'), load('error_content_cn')
+    chests = load('rogue_chest_data_cn')
+    boxes = {str(row[0]) for chest in chests.values() for reward in sequence(chest.get('reward')) for row in sequence(rewards.get(str(reward), {}).get('preview')) if isinstance(row, list) and len(row) >= 2 and row[1] == 0}
+    names = {item: items[item]['name'] for item in boxes if items.get(item, {}).get('type') == 1029}
+    prefix = os.path.commonprefix(list(names.values()))
+    classes = {item: name[len(prefix):] for item, name in names.items()}
+    heading = re.escape(strings['PANEL_ROGUE_CHEST_LEVEL']['error_content']).replace(re.escape('{1}'), r'(\d+)')
+    rates = {}
+    for line in re.sub(r'<[^>]+>', '', strings['PANEL_ROGUE_CHEST_HELP_CN']['error_content']).split('\n'):
+        level = re.search(heading, line)
+        if not level:
+            continue
+        guaranteed, extra = {}, {}
+        for share, segment in re.findall(r'(\d+(?:\.\d+)?)%(.*?)(?=\d+(?:\.\d+)?%|$)', line[level.end():]):
+            found = [word for word in set(classes.values()) if word in segment]
+            if len(found) != 1:
+                continue
+            count = re.search(r'(\d+)\D?' + re.escape(found[0]), segment)
+            if float(share) == 100:
+                guaranteed[found[0]] = int(count.group(1)) if count else 1
+            else:
+                extra[found[0]] = round(float(share) * 10000)
+        rates[level.group(1)] = {'guaranteed': guaranteed, 'extra': extra}
+    result, previous = {}, None
+    for key in sorted(chests, key=int):
+        current = rates.get(str(chests[key].get('levelDes')), previous)
+        previous = current
+        if current is None:
+            continue
+        for reward in sequence(chests[key].get('reward')):
+            rows = {classes[str(row[0])]: str(row[0]) for row in sequence(rewards.get(str(reward), {}).get('preview')) if isinstance(row, list) and len(row) >= 2 and row[1] == 0 and str(row[0]) in classes}
+            result[str(reward)] = {
+                'guaranteed': {rows[word]: count for word, count in current['guaranteed'].items() if word in rows},
+                'extra': {rows[word]: chance for word, chance in current['extra'].items() if word in rows},
+            }
+    return result
+
+
 def rogue(t):
     load = t.module
     constants = load('constant_data')
@@ -441,6 +483,9 @@ def rogue(t):
         'shops': shops,
         'relics': relics,
         'chests': rows('rogue_chest_data_cn', ['energy_cost', 'coin_cost', 'limitLv', 'unlock_battle', 'reward']),
+        'chest_drops': rogue_chest_drops(t),
+        'hero_unlock_wins': {key: row.get('unlock_win_num', 0) for key, row in load('rogue_unlock_hero_data').items()},
+        'hero_num': constants['rogue_hero_num'],
         'pve': rows('rogue_pve_data', ['battle_seq', 'battle_lv_seq', 'evt_group_seq', 'evt_group_pool', 'buff_pool', 'enemy_buff_seq', 'unlock_lv', 'difficulty', 'opening_time', 'posList', 'posSwitch']),
         'events': events,
         'event_groups': {key: value['event'] for key, value in load('rogue_pve_event_group_data').items()},

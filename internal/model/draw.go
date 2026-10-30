@@ -10,8 +10,9 @@ type DrawPoolState struct {
 }
 
 type DrawCounter struct {
-	Number  int `json:"number" wire:"num"`
-	Advance int `json:"advance" wire:"advance"`
+	Number  int  `json:"number" wire:"num"`
+	Advance int  `json:"advance" wire:"advance"`
+	Claimed bool `json:"claimed,omitempty" wire:"-"`
 }
 
 type DrawRecord struct {

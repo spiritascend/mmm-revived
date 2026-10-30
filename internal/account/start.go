@@ -21,7 +21,7 @@ func ParseStart(value string) (Start, error) {
 	case StartItems, StartUnlocked:
 		return start, nil
 	default:
-		return "", fmt.Errorf("start must be %q or %q; use fresh_start for a retail start", StartItems, StartUnlocked)
+		return "", fmt.Errorf("start must be %q or %q", StartItems, StartUnlocked)
 	}
 }
 

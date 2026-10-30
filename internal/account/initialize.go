@@ -1,6 +1,7 @@
 package account
 
 import (
+	"maps"
 	"slices"
 	"strconv"
 
@@ -160,6 +161,11 @@ func (a *Account) Initialize(c Catalog, r *Rules) {
 			a.TeamBreak = TeamBreakAt(r, a.Level)
 		}
 		a.normalizeSkins(r)
+		if a.Retail {
+			for _, id := range slices.Sorted(maps.Keys(a.Heroes)) {
+				_ = a.grantStarReward(r, id, 0)
+			}
+		}
 		for id, rule := range r.Tasks {
 			if _, ok := a.Tasks[id]; !ok {
 				a.Tasks[id] = model.Task{Status: 2}

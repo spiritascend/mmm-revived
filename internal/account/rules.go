@@ -76,6 +76,7 @@ type Rules struct {
 	AllEvents             EventWindows                                    `json:"-"`
 	TeamSize              int                                             `json:"-"`
 	EnergyRegen           float64                                         `json:"-"`
+	RewardMultiplier      int                                             `json:"-"`
 }
 
 type HeroTraits struct {

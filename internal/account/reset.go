@@ -33,14 +33,49 @@ func (a *Account) HeroResetItems(r *Rules, id model.HeroID) (map[model.ItemID]in
 		}
 		addItems(items, row)
 	}
+	traits, known := r.HeroTraits[id]
+	if !known {
+		return nil, rejected("unknown hero")
+	}
+	for star := traits.Star; star < hero.Star; star++ {
+		cost, known := r.HeroStars[star]
+		if !known {
+			return nil, rejected("unknown hero star")
+		}
+		addItems(items, cost)
+	}
 	for slot, maximum := range hero.Talents {
-		for level := 2; level <= maximum; level++ {
+		for level := r.baseTalentLevel(id, slot) + 1; level <= maximum; level++ {
 			row, known := r.HeroTalent(id, slot, level)
 			if !known {
 				return nil, rejected("unknown hero talent")
 			}
 			addItems(items, row.Cost)
 		}
+	}
+	awakened, err := awakeRefund(r, hero.AwakeIDs)
+	if err != nil {
+		return nil, err
+	}
+	addItems(items, awakened)
+	return items, nil
+}
+
+func (r *Rules) baseTalentLevel(id model.HeroID, slot int) int {
+	if rule, known := r.HeroTalent(id, slot, 1); known && rule.Break == 0 && len(rule.Cost) == 0 {
+		return 1
+	}
+	return 0
+}
+
+func awakeRefund(r *Rules, awakened []int) (map[model.ItemID]int64, error) {
+	items := map[model.ItemID]int64{}
+	for _, awake := range awakened {
+		row, known := r.HeroAwake[awake]
+		if !known || len(row.Cost) != 2 {
+			return nil, rejected("unknown hero awakening")
+		}
+		items[model.ItemID(row.Cost[0])] += row.Cost[1]
 	}
 	return items, nil
 }
@@ -75,13 +110,9 @@ func (a *Account) ResetHeroAwake(r *Rules, id model.HeroID, now int64) (map[mode
 	if !owned || len(hero.AwakeIDs) == 0 {
 		return nil, rejected("hero has no awakening to reset")
 	}
-	items := map[model.ItemID]int64{}
-	for _, awake := range hero.AwakeIDs {
-		row, known := r.HeroAwake[awake]
-		if !known || len(row.Cost) != 2 {
-			return nil, rejected("unknown hero awakening")
-		}
-		items[model.ItemID(row.Cost[0])] += row.Cost[1]
+	items, err := awakeRefund(r, hero.AwakeIDs)
+	if err != nil {
+		return nil, err
 	}
 	next := *a
 	next.Items = maps.Clone(a.Items)
@@ -133,10 +164,14 @@ func (a *Account) FreeResetHero(r *Rules, id model.HeroID) (map[model.ItemID]int
 	}
 	hero := a.Heroes[id]
 	hero.Level, hero.Break, hero.Experience = 1, 0, 0
-	hero.Talents = maps.Clone(hero.Talents)
+	hero.Star = min(hero.Star, r.HeroTraits[id].Star)
+	talents := make(map[int]int, len(hero.Talents))
 	for slot := range hero.Talents {
-		hero.Talents[slot] = 1
+		if base := r.baseTalentLevel(id, slot); base > 0 {
+			talents[slot] = base
+		}
 	}
+	hero.Talents, hero.AwakeIDs = talents, []int{}
 	a.Heroes[id] = hero
 	return items, nil
 }

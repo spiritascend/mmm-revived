@@ -217,7 +217,7 @@ func (a *Account) UseItem(r *Rules, id model.ItemID, count int64, selection int)
 	}
 	var quantities map[model.ItemID]int64
 	var err error
-	cost := map[model.ItemID]int64{id: count}
+	cost, multiplier := map[model.ItemID]int64{id: count}, count
 	switch rule.Type {
 	case 1008:
 		quantities = map[model.ItemID]int64{r.Constants.Items.Energy: rule.Parameter}
@@ -232,8 +232,9 @@ func (a *Account) UseItem(r *Rules, id model.ItemID, count int64, selection int)
 		if selection < 0 || selection >= len(rule.Choices) || rule.Secondary < 0 || rule.Secondary > 0 && count > math.MaxInt64/rule.Secondary {
 			return nil, rejected("chest choice is invalid")
 		}
-		quantities, err = rewardItems(r, model.RewardID(rule.Choices[selection]), 1)
+		quantities, err = rogueChestItems(r, []model.RewardID{model.RewardID(rule.Choices[selection])}, count)
 		cost[r.Constants.Items.Energy] += rule.Secondary * count
+		multiplier = 1
 	case 1024:
 		recipe := model.CraftID(rule.Parameter)
 		if _, known := r.Crafts[recipe]; !known || slices.Contains(a.CraftRecipes, recipe) {
@@ -256,7 +257,7 @@ func (a *Account) UseItem(r *Rules, id model.ItemID, count int64, selection int)
 	if err != nil {
 		return nil, err
 	}
-	rewards, err := multiplied(quantities, count)
+	rewards, err := multiplied(quantities, multiplier)
 	if err != nil {
 		return nil, err
 	}

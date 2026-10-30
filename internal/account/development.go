@@ -20,8 +20,8 @@ func (a *Account) StarHero(r *Rules, id model.HeroID) error {
 	}
 	hero.Star++
 	next.Heroes[id] = hero
-	if reward := r.HeroStarReward(id); hero.Star == 3 && reward != 0 {
-		if err := next.Grant(r, reward); err != nil {
+	if hero.Star == 3 {
+		if err := next.grantStarReward(r, id, 0); err != nil {
 			return err
 		}
 	}
@@ -30,6 +30,23 @@ func (a *Account) StarHero(r *Rules, id model.HeroID) error {
 	next.RefreshTasks(r)
 	*a = next
 	return nil
+}
+
+func (a *Account) grantStarReward(r *Rules, id model.HeroID, depth int) error {
+	reward := r.HeroStarReward(id)
+	if hero, owned := a.Heroes[id]; !owned || reward == 0 || hero.Trial != 0 || hero.Star < 3 {
+		return nil
+	}
+	items, err := rewardItems(r, reward, 1)
+	if err != nil {
+		return err
+	}
+	for item := range items {
+		if a.Items[item] > 0 {
+			delete(items, item)
+		}
+	}
+	return a.grantItems(r, items, depth+1)
 }
 
 func (a *Account) TalentHero(r *Rules, id model.HeroID, slot int) error {
