@@ -22,12 +22,20 @@ func (s *Store) ConfigureTeamSize(size int) error {
 }
 
 func (r *Rules) BattleHeroLimit(id model.BattleID) (int, bool) {
+	return r.battleHeroLimit(id, r.TeamSize)
+}
+
+func (a *Account) BattleHeroLimit(r *Rules, id model.BattleID) (int, bool) {
+	return r.battleHeroLimit(id, a.battleTeamSize(r))
+}
+
+func (r *Rules) battleHeroLimit(id model.BattleID, teamSize int) (int, bool) {
 	if r == nil {
 		return 0, false
 	}
 	rule := r.BattleSettings[id]
-	if r.TeamSize <= 0 || r.TeamSize == rule.Heroes || rule.Heroes != r.Constants.FormationSize || rule.SkipDeploy || r.RogueBattle(id) {
+	if teamSize <= 0 || teamSize == rule.Heroes || rule.Heroes != r.Constants.FormationSize || rule.SkipDeploy || r.RogueBattle(id) {
 		return rule.Heroes, false
 	}
-	return r.TeamSize, true
+	return teamSize, true
 }

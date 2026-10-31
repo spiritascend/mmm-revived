@@ -13,6 +13,9 @@ type FriendComponent struct {
 	SupportRecord      map[UserID]map[HeroID]int    `wire:"supportRewardRecord"`
 }
 
+// HelperUID identifies the local chat contact and is never stored as an account.
+const HelperUID UserID = 1
+
 type Friend struct {
 	Nickname string `wire:"nickName"`
 	Added    int64  `wire:"time"`

@@ -25,6 +25,7 @@ type Player struct {
 	CampActivity          model.ActivityID
 	CampNode              int
 	Deployment            []model.DeploymentHero
+	ArtifactWizard        *ArtifactWizard
 	ActivityBattle        model.ActivityID
 	ActivityMission       int
 	ActivityNode          int
@@ -53,6 +54,29 @@ type Player struct {
 	Day                   int64
 	mailSeen              model.MailID
 	mailReady             bool
+}
+
+type ArtifactWizardStage uint8
+
+const (
+	ArtifactWizardID ArtifactWizardStage = iota
+	ArtifactWizardRarity
+	ArtifactWizardStartingCount
+	ArtifactWizardStartingStats
+	ArtifactWizardUpgradeCount
+	ArtifactWizardUpgradeStats
+	ArtifactWizardInventory
+	ArtifactWizardCopies
+)
+
+type ArtifactWizard struct {
+	ArtifactID    model.ArtifactID
+	Template      int
+	StartingCount int
+	StartingStats []string
+	UpgradeCount  int
+	UpgradeStats  []string
+	Stage         ArtifactWizardStage
 }
 
 type reply struct {

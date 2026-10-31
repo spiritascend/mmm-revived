@@ -178,7 +178,7 @@ def rules(t):
         'skins': {key: row.get('owner', 0) for key, row in load('skin_res_data_cn').items()},
         'skin_rarities': {key: row.get('rarity', 0) for key, row in load('skin_res_data_cn').items()},
         'skin_collection': skin_collection(t),
-        'artifacts': {key: {'refinable': row.get('isrefresh') == 1, 'sub_levels': row.get('sub_attr_lv') or [], 'position': row.get('position', 0), 'max_level': row.get('max_lv', 0), 'star': row.get('star', 0), 'template': row.get('template') or [], 'pool': row.get('pool') or [], 'unique': row.get('isrefresh') == 1, 'item': row.get('itemId', 0), 'unreleased': key not in t.released('artifact_data_cn')} for key, row in artifacts.items()},
+        'artifacts': {key: {'name': row.get('name', ''), 'refinable': row.get('isrefresh') == 1, 'sub_levels': row.get('sub_attr_lv') or [], 'position': row.get('position', 0), 'max_level': row.get('max_lv', 0), 'star': row.get('star', 0), 'template': row.get('template') or [], 'pool': row.get('pool') or [], 'unique': row.get('isrefresh') == 1, 'item': row.get('itemId', 0), 'unreleased': key not in t.released('artifact_data_cn')} for key, row in artifacts.items()},
         'artifact_levels': {key: {str(index + 1): {'experience': row.get('exp_need', 0), 'money': row.get('money', 0)} for index, row in enumerate(value)} if isinstance(value, list) else value for key, value in load('artifact_up_data').items()},
         'hero_stars': {key: row.get('item', {}) for key, row in load('character_star_data').items()},
         'hero_talents': {key: {'break': row.get('break_need', 0), 'cost': row.get('item') or {}} for key, row in load('character_talent_data_cn').items()},

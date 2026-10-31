@@ -129,6 +129,7 @@ func (a *Account) Snapshot(c Catalog, r *Rules) model.Avatar {
 		profile.Heroes.HighlightCounts[highlight.ID]++
 	}
 	profile.Draw = a.DrawSnapshot()
+	a.EconomySnapshot(r, &profile.Draw)
 	a.JourneySnapshot(&profile, now)
 	a.EventsSnapshot(&profile)
 	a.manualSnapshot(&profile)

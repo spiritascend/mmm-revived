@@ -84,9 +84,30 @@ Banner ids: 2 Iron Man, 3 Captain America, 4 Loki, 5 Invisible Woman, 6 Mister F
 - **Friend duels:** challenge a friend from the friend list with Own Heroes, Random 5 or Current Draft, then pick how abilities are played:
   - **Auto Abilities:** heroes play themselves.
   - **Manual Abilities:** a custom PvP mode where you play every card and ultimate yourself, synced live between both players. No timer and no speed-up; the duel ends when one side's heroes are all dead.
+- **Helper chat artifact command:** open the built-in **Helper** contact in the friend chat and send `/gain_artifact`. The private wizard lists available artifact IDs, then guides you through rarity, starting stats, upgrade rolls, and inventory quantity. Use `/cancel` to stop. The command does not use or alter world-chat rate limits.
+- **Helper chat settings commands:** send `/commands` in Helper to see commands for artifact names and settings such as energy, draws, banners, and team size. Settings are saved to the sending player's account, apply immediately, and do not change other players' settings or the server's `build/config.toml`. `/featured_banners` accepts comma-separated banner IDs from the list above, or `none` to clear the player's featured-banner selection.
 - **Live friend status:** online and offline updates show up instantly.
 - **Latest CN content (2.1.20):** all heroes, events and missions.
 - **Local login:** username and password, no NetEase account needed.
+
+## Helper chat commands
+
+Open the built-in **Helper** contact in the friend chat. Commands sent there are private; world chat and its rate limits are unchanged. `/commands` lists the commands in-game.
+
+| Command | Usage |
+| --- | --- |
+| `/gain_artifact` | Start the guided artifact creation wizard. |
+| `/artifact_ids` | List available artifact IDs and names. |
+| `/cancel` | Cancel the active artifact wizard. |
+| `/infinite_energy` | `/infinite_energy on` or `/infinite_energy off` (also accepts `true`/`false`, `yes`/`no`, or `1`/`0`; the misspelled `/infinte_energy` is also accepted). |
+| `/free_draws` | `/free_draws on` or `/free_draws off` (also accepts `true`/`false`, `yes`/`no`, or `1`/`0`). |
+| `/dreamstone_shop` | `/dreamstone_shop on` or `/dreamstone_shop off` (also accepts `true`/`false`, `yes`/`no`, or `1`/`0`). |
+| `/all_banners` | `/all_banners on` or `/all_banners off` (also accepts `true`/`false`, `yes`/`no`, or `1`/`0`). |
+| `/featured_banners` | `/featured_banners 2,5,12` using banner IDs listed in [Config](#config), or `/featured_banners none` to clear the selection. |
+| `/team_size` | `/team_size 1` through `/team_size 5`. |
+| `/commands` | Show the in-game command list. |
+
+Helper settings are per-player account overrides of the server's defaults. They persist across logins and apply immediately to the player who sent the command; they do not edit `build/config.toml` or affect other players. Server owners can still use the Config options above to set defaults for all accounts.
 
 ## Issues
 

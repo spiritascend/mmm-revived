@@ -35,6 +35,9 @@ func Register(srv *server.Service, r *server.Router) {
 	r.Handle("sendGift2Friends", rpc.Bind(DecodePlayers, s.sendGifts))
 	r.Handle("recvFriendGifts", rpc.Bind(DecodePlayers, s.claimGifts))
 	r.Handle("acqChatMsg", rpc.Bind(DecodeChatPeer, func(p *server.Player, peer model.UserID) error {
+		if peer == model.HelperUID {
+			return nil
+		}
 		return s.Store.Social.Acknowledge(p.Account.UID, peer)
 	}))
 	r.Handle("sendChat2Channel", rpc.Bind(DecodeChat, s.sendChat))

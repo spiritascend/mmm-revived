@@ -20,6 +20,7 @@ type Account struct {
 	CurrentStory   model.MissionID                           `json:"current_story"`
 	CurrentMemento model.MissionID                           `json:"current_memento"`
 	Profile        model.ProfileCustomization                `json:"profile"`
+	HelperSettings HelperSettings                            `json:"helper_settings,omitempty"`
 	Lineups        map[int]model.Lineup                      `json:"lineups"`
 	Experience     int64                                     `json:"experience"`
 	RewardedLevels []int                                     `json:"rewarded_levels"`

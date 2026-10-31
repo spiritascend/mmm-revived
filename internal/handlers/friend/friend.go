@@ -221,6 +221,9 @@ func (s service) sendChat(p *server.Player, r SendChat) error {
 	case model.GuildChat:
 		return guild.SendChat(s.Service, p, r.Kind, r.Text)
 	case model.PrivateChat:
+		if r.Target == model.HelperUID {
+			return s.helperChat(p, r.Kind, r.Text)
+		}
 	default:
 		if err := s.Store.Update(p.Account, func(*sql.Tx) error {
 			p.Account.RecordJourneyTaskEvent(s.Store.Rules, 96, 1, 0)

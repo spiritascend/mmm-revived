@@ -79,6 +79,10 @@ func (a *Account) RegenerateEnergy(r *Rules, now int64) bool {
 		return false
 	}
 	energy, bank, refreshed := a.Items[r.Constants.Items.Energy], a.Energy.Bank, a.Energy.Refreshed
+	if a.Economy(r).InfiniteEnergy {
+		a.Items[r.Constants.Items.Energy] = max(energy, r.TeamLevels[a.Level].EnergyLimit)
+		return energy != a.Items[r.Constants.Items.Energy]
+	}
 	if a.Energy.Refreshed <= 0 || a.Energy.Refreshed > now {
 		a.Energy.Refreshed = now
 	}

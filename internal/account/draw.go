@@ -116,7 +116,7 @@ func (r DrawRules) resolvePrize(prize int) (model.DrawSetID, model.ItemID, error
 func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemID, error) {
 	a.InitializeDraw()
 	pool, known := r.Draw.Pools[id]
-	if !known || a.Level < pool.Level || !r.drawPoolOpen(id, pool, now) {
+	if !known || a.Level < pool.Level || !a.drawPoolOpen(r, id, pool, now) {
 		return 0, rejected("draw pool is not open")
 	}
 	state := a.Draw.Pools[id]
@@ -203,7 +203,7 @@ func (a *Account) DrawOne(r *Rules, id model.DrawPoolID, now int64) (model.ItemI
 	if err = next.Spend(cost); err != nil {
 		return 0, err
 	}
-	if r.Economy.FreeDraws {
+	if a.Economy(r).FreeDraws {
 		for currency, count := range cost {
 			next.Items[currency] += count
 		}

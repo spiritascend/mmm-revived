@@ -10,7 +10,6 @@ import (
 
 func (s *Service) clientSnapshot(a *account.Account) model.Avatar {
 	profile := a.Snapshot(s.Store.Catalog, s.Store.Rules)
-	s.Store.Rules.EconomySnapshot(&profile.Draw)
 	s.Store.Rules.EventWindowSnapshot(&profile.Activities)
 	a.DoubleMaterialSnapshot(s.Store.Rules, &profile.Challenges)
 	profile.Achievement = a.AchievementSnapshot(s.Store.Rules)

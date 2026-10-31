@@ -212,7 +212,7 @@ func (s service) createBattle(p *server.Player, r CreateBattle) error {
 		p.State, p.SelectedHeroes = server.Combat, fixedHeroes(rule)
 	}
 	if info, standard := extraBattle.(battleInfo); standard {
-		if limit, custom := s.Store.Rules.BattleHeroLimit(r.Battle); custom {
+		if limit, custom := p.Account.BattleHeroLimit(s.Store.Rules, r.Battle); custom {
 			info.HeroLimit, p.HeroLimit = limit, limit
 			extraBattle = info
 		}

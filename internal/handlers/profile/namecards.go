@@ -25,6 +25,14 @@ func (s service) nameCards(p *server.Player, r NameCards) error {
 	}
 	cards := make([]map[string]string, 0, len(r.Players))
 	for _, id := range r.Players {
+		if id == model.HelperUID {
+			card, err := helperNameCard(r.Keys, honorScores(s.Store.Rules))
+			if err != nil {
+				return err
+			}
+			cards = append(cards, card)
+			continue
+		}
 		entry, found := profiles[id]
 		if !found {
 			cards = append(cards, map[string]string{"deleted": "1"})
@@ -88,6 +96,55 @@ func (s service) nameCards(p *server.Player, r NameCards) error {
 		cards = append(cards, selected)
 	}
 	return p.Send("onReqNameCard", r.Players, cards)
+}
+
+func helperNameCard(keys []string, scores []int) (map[string]string, error) {
+	const scarletWitch model.HeroID = 103
+	card := model.NameCard{
+		Name: "Helper", Head: "5103", Frame: "0", Level: "1", Deleted: "0",
+		Signature: "Your local server helper.",
+		Story:     "0", Offline: "0", Online: "0", SeasonLevel: "0", PVP: "0",
+		Heroes: "1", Badge: "0", Background: "0", Host: "1", Points: "0",
+		Created: "0", Skins: "0", Server: "Local", GuildID: "0",
+		GuildTitle: "",
+	}
+	wanda := model.Hero{
+		ID: scarletWitch, Level: 1, Star: 3,
+		Talents: map[int]int{}, AwakeIDs: []int{}, Artifacts: map[int]model.InstanceID{},
+	}
+	for _, field := range []struct {
+		name        string
+		destination *string
+		value       any
+	}{
+		{"supportHeroes", &card.Support, map[model.HeroID]model.Hero{scarletWitch: wanda}},
+		{"show", &card.Show, []model.ShownHero{{ID: scarletWitch}}},
+		{"ownAchieveBadgeInfo", &card.Badges, map[int]int{}},
+		{"showTags", &card.Tags, model.HonorTags{}},
+		{"season", &card.Season, map[string]int{"season": 0, "stars": 0, "passed": 0}},
+	} {
+		var err error
+		*field.destination, err = server.EncodePayload(field.value)
+		if err != nil {
+			return nil, err
+		}
+	}
+	fields, err := wire.StructFields(card)
+	if err != nil {
+		return nil, err
+	}
+	selected := map[string]string{"deleted": "0"}
+	for _, key := range keys {
+		value, ok := fields[key].(string)
+		if !ok {
+			return nil, fmt.Errorf("unknown name card field %q", key)
+		}
+		selected[key] = value
+	}
+	for _, key := range scores {
+		selected[strconv.Itoa(key)] = "0"
+	}
+	return selected, nil
 }
 
 func honorScores(r *account.Rules) []int {

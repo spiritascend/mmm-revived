@@ -168,6 +168,7 @@ func (r *Repository) Snapshot(uid model.UserID) (model.FriendComponent, error) {
 	for _, row := range friends {
 		result.Friends[row.Peer] = model.Friend{Nickname: row.Nickname, Added: row.Added}
 	}
+	result.Friends[model.HelperUID] = model.Friend{Nickname: "Helper"}
 	applications, err := q.ListApplications(ctx, uid)
 	if err != nil {
 		return result, err
